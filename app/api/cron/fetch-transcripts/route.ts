@@ -30,7 +30,11 @@ export async function GET(request: NextRequest) {
 
       try {
         // Fetch videos from the last 2 days (for daily cron)
-        const videos = await getChannelVideos(channel.youtubeHandle, 2);
+        const videos = await getChannelVideos(
+          channel.youtubeHandle || channel.name,
+          2,
+          channel.channelId
+        );
         console.log(`Found ${videos.length} videos from ${channel.name}`);
 
         // Fetch transcripts for each video
