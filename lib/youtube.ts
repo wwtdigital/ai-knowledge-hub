@@ -121,7 +121,7 @@ export async function getChannelVideos(
 
     return videos.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
   } catch (error) {
-    console.error(`Failed to fetch videos for channel ${channelHandle}:`, error);
+    console.error(`Failed to fetch videos for channel ${channelHandleOrId}:`, error);
     throw new Error(`Could not fetch channel videos: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
