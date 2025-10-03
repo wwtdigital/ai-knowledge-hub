@@ -1,7 +1,8 @@
 import { writeFile, readFile, mkdir, readdir } from 'fs/promises';
-import { join } from 'path';
+import { join, normalize, resolve } from 'path';
 import { VideoWithTranscript } from './youtube';
 import { existsSync } from 'fs';
+import { sanitizeFilename } from './validation';
 
 const TRANSCRIPTS_DIR = join(process.cwd(), 'transcripts');
 const INDEX_FILE = join(process.cwd(), 'transcripts', 'INDEX.md');
@@ -16,26 +17,47 @@ async function ensureTranscriptsDir() {
 }
 
 /**
- * Generate markdown filename from video metadata
+ * Validate file path to prevent directory traversal
+ */
+function validateFilePath(filePath: string): string {
+  const normalizedPath = normalize(filePath);
+  const resolvedPath = resolve(normalizedPath);
+  const resolvedBaseDir = resolve(TRANSCRIPTS_DIR);
+
+  // Ensure the resolved path is within the transcripts directory
+  if (!resolvedPath.startsWith(resolvedBaseDir)) {
+    throw new Error('Invalid file path: potential directory traversal detected');
+  }
+
+  return resolvedPath;
+}
+
+/**
+ * Generate markdown filename from video metadata (sanitized)
  */
 function getMarkdownFilename(video: VideoWithTranscript): string {
   const date = video.publishedAt.toISOString().split('T')[0]; // YYYY-MM-DD
-  const channelSlug = video.channelName.toLowerCase().replace(/\s+/g, '-');
-  const titleSlug = video.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .substring(0, 50);
+
+  // Sanitize all parts to prevent path traversal
+  const channelSlug = sanitizeFilename(video.channelName.toLowerCase());
+  const titleSlug = sanitizeFilename(
+    video.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 50)
+  );
 
   return `${date}_${channelSlug}_${titleSlug}.md`;
 }
 
 /**
- * Get the file path for a video
+ * Get the file path for a video (validated)
  */
 function getVideoFilePath(video: VideoWithTranscript): string {
   const filename = getMarkdownFilename(video);
-  return join(TRANSCRIPTS_DIR, filename);
+  const filePath = join(TRANSCRIPTS_DIR, filename);
+  return validateFilePath(filePath);
 }
 
 /**

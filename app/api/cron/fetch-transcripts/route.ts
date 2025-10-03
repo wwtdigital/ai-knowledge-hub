@@ -2,17 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { channels } from '@/config/channels';
 import { getChannelVideos, fetchVideoWithTranscript } from '@/lib/youtube';
 import { batchSaveTranscripts, updateIndex } from '@/lib/storage';
+import { verifyAuth } from '@/lib/auth';
 
 export const maxDuration = 300; // 5 minutes timeout for Vercel Pro
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret to secure the endpoint
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify cron secret (fail-closed: requires secret to be set)
+    const authError = verifyAuth(request, true);
+    if (authError) {
+      return authError;
     }
 
     console.log('Starting scheduled transcript fetch...');
